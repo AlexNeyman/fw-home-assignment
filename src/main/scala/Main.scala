@@ -1,17 +1,15 @@
 package gpt
-import java.io.File
 import java.nio.file.{Path, Paths}
-import cats.effect.{ExitCode, IO, IOApp, Ref}
+import cats.effect.{ExitCode, IO, IOApp}
 import fs2.Stream
 import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
-import org.http4s.server.blaze.BlazeServerBuilder
-import io.circe.generic.auto._
+import org.http4s.blaze.server.BlazeServerBuilder
 import io.circe.syntax._
 import org.http4s.implicits._
 import io.circe.{Decoder, Encoder, HCursor, Json}
 import org.http4s.EntityDecoder
-import org.http4s.circe.{CirceInstances, DecodingFailures}
+import org.http4s.circe.CirceInstances
 
 case class Flight(
     origArp: String,
@@ -39,8 +37,7 @@ object Flight {
 }
 
 object FlightService extends IOApp with CirceInstances {
-  import cats.effect.unsafe.implicits.global
-  def readFlightsFile(filePath: Path): IO[Seq[Flight]] = {
+  private def readFlightsFile(filePath: Path): IO[Seq[Flight]] = {
     Stream
       .eval(IO(scala.io.Source.fromFile(filePath.toFile)))
       .flatMap(source => Stream.fromIterator[IO](source.getLines(), 64))
@@ -51,14 +48,14 @@ object FlightService extends IOApp with CirceInstances {
       .toList
   }
 
-  def flightExists(flight: Flight, flights: IO[Seq[Flight]]): IO[Boolean] =
+  private def flightExists(flight: Flight, flights: IO[Seq[Flight]]): IO[Boolean] =
     flights.map(_.contains(flight))
 
   // Entity decoder for Flight
   implicit val flightEntityDecoder: EntityDecoder[IO, Flight] =
     jsonOf[IO, Flight]
 
-  def app(flights: IO[Seq[Flight]]): HttpRoutes[IO] =
+  private def app(flights: IO[Seq[Flight]]): HttpRoutes[IO] =
     HttpRoutes.of[IO] {
       case req @ POST -> Root / "fareplace" / "flightExists" =>
         req.decode[Flight] { flight =>
@@ -69,9 +66,6 @@ object FlightService extends IOApp with CirceInstances {
     }
 
   override def run(args: List[String]): IO[ExitCode] = {
-    implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
-    import cats.effect.unsafe.implicits.global
-
     val flightsFilePath = Paths.get("flights.csv")
     val flights = readFlightsFile(flightsFilePath)
     BlazeServerBuilder[IO]
