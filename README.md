@@ -20,3 +20,11 @@ Guy asked ChatGPT to solve it for him, created a PR request based on the output,
 You are expected to review "his" work and fix the code if needs to be.
 
 How does this code fare in terms of scalability, performance, and consistency? Feel free to suggest as many architectural changes as you believe are necessary, and then afterward implement the two issues you deem the most important.
+
+# Changes
+
+## Project itself
+
+I couldn't run the project as it was. SBT simply couldn't deal with it for unknown reason.
+
+So I created a new one and copied the code from the old project. I also had to change the Scala version.
