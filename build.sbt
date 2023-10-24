@@ -1,4 +1,4 @@
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / version := "0.1.0"
 
 ThisBuild / scalaVersion := "2.13.12"
 
@@ -17,6 +17,8 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "cats-effect" % "3.2.9",
       "ch.qos.logback" % "logback-classic" % "1.4.11",
       "com.storm-enroute" %% "scalameter" % "0.21",
+      "org.scalactic" %% "scalactic" % "3.2.17",
+      "org.scalatest" %% "scalatest" % "3.2.17" % "test",
     ),
     idePackagePrefix := Some("gpt"),
     testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),

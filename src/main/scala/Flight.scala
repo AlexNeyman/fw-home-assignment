@@ -9,7 +9,9 @@ case class Flight(
                    destArp: String,
                    date: LocalDate,
                    flightNum: String
-                 )
+                 ) {
+  def id: String = s"$origArp-$destArp-$flightNum"
+}
 
 object Flight {
   implicit val flightEncoder: Encoder[Flight] = (flight: Flight) =>

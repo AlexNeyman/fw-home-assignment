@@ -45,9 +45,11 @@ object FlightService extends IOApp with CirceInstances {
     }
 
   override def run(args: List[String]): IO[ExitCode] = {
+    // FIXME: Use args
     val flightsFilePath = Paths.get("flights.csv")
     val flights = readFlightsFile(flightsFilePath)
     BlazeServerBuilder[IO]
+      // FIXME: Use args
       .bindHttp(8082, "0.0.0.0")
       .withHttpApp(app(flights).orNotFound)
       .resource
