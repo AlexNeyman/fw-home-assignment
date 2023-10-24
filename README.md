@@ -33,11 +33,16 @@ So I created a new project and copied the code from the old one. I also had to c
 
 ## Performance
 
-The way the service worked originally is it reads the file on every request, and seeks for a match line by line. This is
-not efficient, because it has time complexity of O(n), where n is the number of lines in the file.
+The way the service worked originally is it read the file on every request, and sought for a match line by line. This is
+not efficient, because:
 
-A time-efficient approach is to read the file on startup and populate a lookup-efficient data structure by of all
+1) Even though that reading a file may be pretty fast with the right combination of OS, filesystem and hardware, it is
+   still not free.
+2) Looking for a match line by line has time complexity of O(N), where N is the number of lines in the file.
+
+A time-efficient approach is to read the file on startup and populate some lookup-efficient data structure with all
 existing flights.
+
 The first idea was to use a set, where a row from the file becomes its item. A simple concatenation of all four flight
 parameters gives us around 1.1 MB for 12k (test file) flights. We can improve it a bit by hashing the resulting string
 and taking only a part of the hash. If we use 8 hash chars per flight, our 12k flights will cost us around 900 KB of
@@ -48,20 +53,50 @@ efficient solution if we want to cover multiple years of flights while using com
 
 At one point I thought about a Bloom filter, but it may return false positives. The Bloom filter algorithm uses a bit
 array under the hood, so I thought about utilizing this technique somehow. I found interesting the idea of mapping the
-(from, to, num) triplet to a bitmap of available dates. Just to keep things simple (I still don't know Scala), in the
-code I used boolean array instead of bitmap.
+`(from, to, num)` triplet to a bitmap of available dates. Just to keep things simple, in the code I used boolean array
+instead of bitmap.
 
-The last approach gives the same time complexity of O(1) for lookups, but it requires only a negligible amount of
+This gives us the same time complexity of O(1) for lookups, but it requires only a negligible amount of
 memory: just 16 KB for 12k flights. There is still a room for optimization; for example, replacing boolean arrays with
-bitmaps will reduce the memory usage by a factor of 8.
+bitmaps will reduce the memory usage by a factor of 8. Also, currently for a flight with only one date we still create
+an array of N elements, where N is the number of days in the range. This too can be optimized, but it will complicate
+the code.
 
-The downside of it is that we need to know the range of dates in advance, so we can calculate the size of the dates
-array. If our files are sorted, we can easily find the range by looking at the first and the last line. In the code I
-simply hardcoded the range that covers the test file flights.
+The downside of the last approach is that we need to know the range of dates in advance, so we can calculate the size of
+the dates array. If our files are sorted, we can easily find the range by looking at the first and the last line. In the
+code I simply **hardcoded the range** that covers the test file flights.
 
-## Notes
+## DB updates
 
-* DTO
-* DB file location
-* Class files
-* Check everything
+The original code didn't have to bother with file updates, because it simply re-read the file on every request.
+
+Together with the "database" I tried my best to implement a file watcher based on `cats.effect`. The thing is that after
+just a couple of days of playing with Scala I cannot truly validate how idiomatic and efficient this code is.
+
+Btw, the `FlightDB` is written in a mutable manner. I'm not sure how far idiomatic Scala prefers going with
+immutability.
+
+## Scalability
+
+On my local machine in the dev mode with logs enabled and without any JVM tuning the service performs like this:
+
+```
+Summary:
+  Total:        1.5058 secs
+  Slowest:      0.0308 secs
+  Fastest:      0.0001 secs
+  Average:      0.0007 secs
+  Requests/sec: 66408.9598
+```
+
+In order to scale the service, we can run multiple instances of it behind a load balancer. I don't think there may be a
+need to shard the data between instances, because the data structure is very compact and can be easily kept in memory
+entirely.
+
+## Other stuff
+
+* I left the hardcoded file path, listen address and port, but it definitely should be configurable.
+* There are unhandled errors here and there for operations like parsing and file reading.
+* There is definitely a room for tests. I wrote only a couple of unit tests for the `FlightDB` class.
+* Service should be more HTTP-compliant. For example, it should only accept `Content-Type: application/json` requests,
+  unless there is a good reason to do otherwise.
