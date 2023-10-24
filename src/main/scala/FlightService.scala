@@ -11,7 +11,6 @@ import org.http4s.circe.CirceInstances
 
 import java.time.LocalDate
 
-
 object FlightService extends IOApp with CirceInstances {
   implicit val flightEntityDecoder: EntityDecoder[IO, Flight] =
     jsonOf[IO, Flight]

@@ -43,7 +43,7 @@ class FlightDBSuite extends AnyFlatSpec {
     assert(!flightDB.flightExists(Flight("A", "B", LocalDate.of(2023, 1, 1), "2")))
   }
 
-  it should "allow checking for nonexistent flights even outside of schedule" in {
+  it should "allow checking for flights even outside of schedule" in {
     val flightDB = new FlightDB(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 2, 1))
     assert(!flightDB.flightExists(Flight("A", "B", LocalDate.of(2023, 1, 1), "1")))
     assert(!flightDB.flightExists(Flight("A", "B", LocalDate.of(2020, 1, 1), "1")))
