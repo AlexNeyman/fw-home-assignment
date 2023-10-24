@@ -19,10 +19,7 @@ object FlightService extends IOApp with CirceInstances {
     HttpRoutes.of[IO] {
       case req@POST -> Root / "fareplace" / "flightExists" =>
         req.decode[Flight] { flight =>
-          dbRef
-            .get
-            .map(db => db.flightExists(flight))
-            .flatMap(exists => Ok(exists.asJson))
+          dbRef.get.flatMap(db => Ok(db.flightExists(flight).asJson))
         }
     }
   }
