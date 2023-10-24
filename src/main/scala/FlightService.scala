@@ -39,11 +39,11 @@ object FlightService extends IOApp with CirceInstances {
 
     val service = for {
       _ <- dbService.start
-      exitCode <- BlazeServerBuilder[IO]
+      _ <- BlazeServerBuilder[IO]
         .bindHttp(port, host)
         .withHttpApp(routes(dbService.dbRef).orNotFound)
         .resource
-    } yield exitCode
+    } yield ()
 
     service.useForever.as(ExitCode.Success)
   }
