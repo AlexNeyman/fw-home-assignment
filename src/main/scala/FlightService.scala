@@ -1,8 +1,6 @@
 package gpt
 
-import java.nio.file.{Path, Paths}
-import cats.effect.{ExitCode, IO, IOApp}
-import fs2.Stream
+import cats.effect.{ExitCode, IO, IOApp, Ref}
 import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -15,45 +13,39 @@ import java.time.LocalDate
 
 
 object FlightService extends IOApp with CirceInstances {
-  private def readFlightsFile(filePath: Path): IO[Seq[Flight]] = {
-    Stream
-      .eval(IO(scala.io.Source.fromFile(filePath.toFile)))
-      .flatMap(source => Stream.fromIterator[IO](source.getLines(), 64))
-      .map(line => line.split(",").map(_.trim))
-      .filter(cols => cols.length == 4)
-      // FIXME: Handle parsing exceptions
-      .map(cols => Flight(cols(0), cols(1), LocalDate.parse(cols(2)), cols(3)))
-      .compile
-      .toList
-  }
-
-  private def flightExists(flight: Flight, flights: IO[Seq[Flight]]): IO[Boolean] =
-    flights.map(_.contains(flight))
-
-  // Entity decoder for Flight
   implicit val flightEntityDecoder: EntityDecoder[IO, Flight] =
     jsonOf[IO, Flight]
 
-  private def app(flights: IO[Seq[Flight]]): HttpRoutes[IO] =
+  private def routes(dbRef: Ref[IO, FlightDB]): HttpRoutes[IO] = {
     HttpRoutes.of[IO] {
       case req@POST -> Root / "fareplace" / "flightExists" =>
         req.decode[Flight] { flight =>
-          flightExists(flight, flights).flatMap { exists =>
-            Ok(exists.asJson)
-          }
+          dbRef
+            .get
+            .map(db => db.flightExists(flight))
+            .flatMap(exists => Ok(exists.asJson))
         }
     }
+  }
 
   override def run(args: List[String]): IO[ExitCode] = {
     // FIXME: Use args
-    val flightsFilePath = Paths.get("flights.csv")
-    val flights = readFlightsFile(flightsFilePath)
-    BlazeServerBuilder[IO]
-      // FIXME: Use args
-      .bindHttp(8082, "0.0.0.0")
-      .withHttpApp(app(flights).orNotFound)
-      .resource
-      .useForever
-      .as(ExitCode.Success)
+    val filePath = "flights.csv"
+    val host = "0.0.0.0"
+    val port = 8082
+
+    // FIXME: Dates should be parsed from the file
+    val db = new FlightDB(LocalDate.of(2022, 1, 1), LocalDate.of(2022, 12, 26))
+    val dbService = new FlightDBService(filePath, db)
+
+    val service = for {
+      _ <- dbService.start
+      exitCode <- BlazeServerBuilder[IO]
+        .bindHttp(port, host)
+        .withHttpApp(routes(dbService.dbRef).orNotFound)
+        .resource
+    } yield exitCode
+
+    service.useForever.as(ExitCode.Success)
   }
 }

@@ -32,6 +32,10 @@ class FlightDB(val scheduleStartsFrom: LocalDate, val scheduleEndsAt: LocalDate)
     flights += (flight.id -> flightSchedule)
   }
 
+  def clear(): Unit = {
+    flights = Map.empty
+  }
+
   def flightExists(flight: Flight): Boolean = {
     flights.get(flight.id) match {
       case Some(schedule) =>
