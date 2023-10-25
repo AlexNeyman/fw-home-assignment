@@ -7,12 +7,21 @@ class FlightDB {
   private case class FlightSchedule(
                                      // Used as an offset to calculate the index of a flight in the schedule
                                      firstFlightDate: LocalDate,
-                                     // Each boolean represents whether a flight exists on that day
+                                     // Each boolean represents whether a flight exists on that day.
+                                     // Can be replaced with a bitset for better memory efficiency.
                                      schedule: Array[Boolean] = Array.empty
                                    ) {
     def addFlight(flight: Flight): Try[FlightSchedule] = {
       flightDateToScheduleIndex(flight.date) match {
         case Success(i) if i >= schedule.length =>
+          // This approach may be a problem on a large scale because of lots of copying.
+          // Though there is a simple solution: we need to know the min and max dates in the schedule beforehand.
+          // Then we can allocate an array of the right size in advance.
+          //
+          // We also can use vectors, which is a persistent data structure,
+          // so it doesn't copy the whole data on appends.
+          // The downside of vectors is that they use more memory than arrays,
+          // plus they can be slightly slower in lookups.
           val newSchedule = schedule ++ Array.fill(i - schedule.length + 1)(false)
           Success(this.copy(schedule = newSchedule.updated(i, true)))
 
