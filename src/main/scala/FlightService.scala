@@ -30,9 +30,7 @@ object FlightService extends IOApp with CirceInstances {
     val host = "0.0.0.0"
     val port = 8082
 
-    // FIXME: Dates should be parsed from the file
-    val db = new FlightDB(LocalDate.of(2022, 1, 1), LocalDate.of(2022, 12, 26))
-    val dbService = new FlightDBService(filePath, db)
+    val dbService = new FlightDBService(filePath, new FlightDB())
 
     val service = for {
       _ <- dbService.start

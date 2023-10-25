@@ -10,6 +10,8 @@ case class Flight(
                    date: LocalDate,
                    flightNum: String
                  ) {
+  type FlightID = String
+
   def id: String = s"$origArp-$destArp-$flightNum"
 }
 

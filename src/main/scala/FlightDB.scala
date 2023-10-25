@@ -2,34 +2,52 @@ package gpt
 
 import java.time.LocalDate
 
-class FlightDB(val scheduleStartsFrom: LocalDate, val scheduleEndsAt: LocalDate) {
-  private type FlightKey = String
-  private type Schedule = Array[Boolean]
-
-  if (scheduleStartsFrom.isAfter(scheduleEndsAt)) {
-    throw new IllegalArgumentException("scheduleStartsFrom cannot be after scheduleEndsAt")
-  }
-
-  private val scheduleSize = scheduleEndsAt.toEpochDay - scheduleStartsFrom.toEpochDay + 1
-  // Such defensive programming is not always required
-  if (scheduleSize > Int.MaxValue) {
-    throw new IllegalArgumentException("Schedule is too long")
-  }
-
-  private var flights = Map.empty[FlightKey, Schedule]
-
-  def addFlight(flight: Flight): Unit = {
-    if (flight.date.isBefore(scheduleStartsFrom) || flight.date.isAfter(scheduleEndsAt)) {
-      throw new IllegalArgumentException("Flight date is outside of schedule")
+class FlightDB {
+  private case class FlightSchedule(
+                                     // Used as an offset to calculate the index of a flight in the schedule
+                                     firstFlightDate: LocalDate,
+                                     // Each boolean represents whether a flight exists on that day
+                                     schedule: Vector[Boolean] = Vector.empty
+                                   ) {
+    def addFlight(flight: Flight): FlightSchedule = {
+      flightDateToScheduleIndex(flight.date) match {
+        case i if i >= schedule.length =>
+          val newSchedule = schedule ++ Vector.fill(i - schedule.length + 1)(false)
+          FlightSchedule(firstFlightDate, newSchedule.updated(i, true))
+        case i =>
+          FlightSchedule(firstFlightDate, schedule.updated(i, true))
+      }
     }
 
-    val flightSchedule: Schedule =
-      flights.getOrElse(flight.id,
-        Array.fill(scheduleSize.toInt)(false))
+    def flightExists(flight: Flight): Boolean = {
+      if (flight.date.isBefore(firstFlightDate) ||
+        flight.date.isAfter(firstFlightDate.plusDays(schedule.length))) {
+        false
+      } else {
+        schedule(flightDateToScheduleIndex(flight.date))
+      }
+    }
 
-    flightSchedule(flightDateToScheduleIndex(flight.date)) = true
+    private def flightDateToScheduleIndex(flightDate: LocalDate): Int = {
+      flightDate.toEpochDay - firstFlightDate.toEpochDay match {
+        case i if i > Int.MaxValue =>
+          // FIXME: Exceptions are not the best way to handle this
+          throw new IllegalArgumentException("Flight is too far in the future")
+        case i if i < 0 =>
+          // FIXME: Exceptions are not the best way to handle this
+          throw new IllegalArgumentException("Flight is before the first flight in the schedule")
+        case i =>
+          i.toInt
+      }
+    }
+  }
 
-    flights += (flight.id -> flightSchedule)
+  private var flights = Map.empty[String, FlightSchedule]
+
+  def addFlight(flight: Flight): Unit = {
+    val flightSchedule = flights.getOrElse(flight.id, FlightSchedule(flight.date))
+
+    flights += (flight.id -> flightSchedule.addFlight(flight))
   }
 
   def clear(): Unit = {
@@ -39,17 +57,9 @@ class FlightDB(val scheduleStartsFrom: LocalDate, val scheduleEndsAt: LocalDate)
   def flightExists(flight: Flight): Boolean = {
     flights.get(flight.id) match {
       case Some(schedule) =>
-        schedule(flightDateToScheduleIndex(flight.date))
+        schedule.flightExists(flight)
       case None =>
         false
     }
-  }
-
-  private def flightDateToScheduleIndex(date: LocalDate): Int = {
-    val i = date.toEpochDay - scheduleStartsFrom.toEpochDay
-    if (i > Int.MaxValue) {
-      throw new IllegalArgumentException("Flight is too far in the future")
-    }
-    i.toInt
   }
 }
