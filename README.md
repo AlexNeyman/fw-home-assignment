@@ -61,8 +61,6 @@ There is still a room for optimization. For example, initially I used boolean ar
 and last flight dates in advance to set their length, but with arrays 12k flights consumed only 16 KB of memory. And
 finally, by replacing arrays with bitmaps we will reduce memory usage further by a factor of 8.
 
-Initially I used Arrays instead of
-
 ## DB updates
 
 The original code didn't have to bother with file updates, because it simply re-read the file on every request.
