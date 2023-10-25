@@ -27,6 +27,8 @@ class FlightDBService(path: String, db: FlightDB) {
         if (cols.length == 4) {
           // FIXME: Handle date parsing exceptions
           val flight = Flight(cols(0), cols(1), LocalDate.parse(cols(2)), cols(3))
+
+          // FIXME: Handle addFlight exceptions
           db.addFlight(flight)
         }
       }

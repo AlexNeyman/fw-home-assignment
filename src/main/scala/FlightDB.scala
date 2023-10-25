@@ -1,6 +1,7 @@
 package gpt
 
 import java.time.LocalDate
+import scala.util.{Failure, Success, Try}
 
 class FlightDB {
   private case class FlightSchedule(
@@ -9,13 +10,17 @@ class FlightDB {
                                      // Each boolean represents whether a flight exists on that day
                                      schedule: Vector[Boolean] = Vector.empty
                                    ) {
-    def addFlight(flight: Flight): FlightSchedule = {
+    def addFlight(flight: Flight): Try[FlightSchedule] = {
       flightDateToScheduleIndex(flight.date) match {
-        case i if i >= schedule.length =>
+        case Success(i) if i >= schedule.length =>
           val newSchedule = schedule ++ Vector.fill(i - schedule.length + 1)(false)
-          FlightSchedule(firstFlightDate, newSchedule.updated(i, true))
-        case i =>
-          FlightSchedule(firstFlightDate, schedule.updated(i, true))
+          Success(this.copy(schedule = newSchedule.updated(i, true)))
+
+        case Success(i) =>
+          Success(this.copy(schedule = schedule.updated(i, true)))
+
+        case Failure(exception) =>
+          Failure(exception)
       }
     }
 
@@ -24,30 +29,38 @@ class FlightDB {
         flight.date.isAfter(firstFlightDate.plusDays(schedule.length))) {
         false
       } else {
-        schedule(flightDateToScheduleIndex(flight.date))
+        flightDateToScheduleIndex(flight.date) match {
+          case Success(i) => schedule(i)
+          case Failure(_) => false
+        }
       }
     }
 
-    private def flightDateToScheduleIndex(flightDate: LocalDate): Int = {
+    private def flightDateToScheduleIndex(flightDate: LocalDate): Try[Int] = {
       flightDate.toEpochDay - firstFlightDate.toEpochDay match {
         case i if i > Int.MaxValue =>
-          // FIXME: Exceptions are not the best way to handle this
-          throw new IllegalArgumentException("Flight is too far in the future")
+          Failure(new IllegalArgumentException("Flight is too far in the future"))
         case i if i < 0 =>
-          // FIXME: Exceptions are not the best way to handle this
-          throw new IllegalArgumentException("Flight is before the first flight in the schedule")
+          Failure(new IllegalArgumentException("Flight is before the first flight in the schedule"))
         case i =>
-          i.toInt
+          Success(i.toInt)
       }
     }
   }
 
   private var flights = Map.empty[String, FlightSchedule]
 
-  def addFlight(flight: Flight): Unit = {
+  def addFlight(flight: Flight): Try[Unit] = {
     val flightSchedule = flights.getOrElse(flight.id, FlightSchedule(flight.date))
 
-    flights += (flight.id -> flightSchedule.addFlight(flight))
+    flightSchedule.addFlight(flight) match {
+      case Success(newFlightSchedule) =>
+        flights += (flight.id -> newFlightSchedule)
+        Success(())
+
+      case Failure(exception) =>
+        Failure(exception)
+    }
   }
 
   def clear(): Unit = {
