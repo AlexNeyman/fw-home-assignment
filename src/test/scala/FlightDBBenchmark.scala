@@ -15,7 +15,7 @@ object FlightDBBenchmark extends Bench.Group {
 
     performance of "Memory footprint of Set[flight]" in {
       using(Gen.unit("nothing")) in { _ =>
-        collectFlightSet(flights)
+        flights.map(flightToSetItem).toSet
       }
     }
 
@@ -33,9 +33,10 @@ object FlightDBBenchmark extends Bench.Group {
 
     performance of "Time of Set[flight]" in {
       using(Gen.unit("nothing")) in { _ =>
-        val flightSet = collectFlightSet(flights)
+        val flightSet = flights.map(flightToSetItem).toSet
+        val flight = flightToSetItem(randomFlight())
         (1 to lookupCount).foreach { _ =>
-          flightSet.contains(randomFlight().id)
+          flightSet.contains(flight)
         }
       }
     }
@@ -56,11 +57,9 @@ object FlightDBBenchmark extends Bench.Group {
 
   private val sha1 = MessageDigest.getInstance("SHA-1")
 
-  private def collectFlightSet(flights: Seq[Flight]): Set[String] = {
-    for {
-      f <- flights
-    } yield sha1.digest("%s-%s".format(f.id, f.date).getBytes).map("%02x".format(_)).mkString("").take(8)
-  }.toSet
+  private def flightToSetItem(f: Flight): String = {
+    sha1.digest("%s-%s".format(f.id, f.date).getBytes).map("%02x".format(_)).mkString("").take(8)
+  }
 
   private def randomFlight(): Flight = flights(scala.util.Random.nextInt(flights.length))
 
