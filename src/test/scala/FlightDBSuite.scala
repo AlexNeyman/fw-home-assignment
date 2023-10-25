@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import java.time.LocalDate
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class FlightDBSuite extends AnyFlatSpec {
   it should "allow adding valid flights" in {
@@ -66,15 +66,19 @@ class FlightDBSuite extends AnyFlatSpec {
     assert(flightDB.flightExists(flight))
   }
 
-  private def assertSuccess(result: Try[Unit]): Unit = {
+  private def assertSuccess(result: Try[Any]): Unit = {
     assert(result.isSuccess)
   }
 
-  private def assertFailure[T <: AnyRef : ClassTag](result: Try[Unit]): Unit = {
-    assert(result.isFailure)
-    assertThrows[T] {
-      // You have to be cunning when you don't know Scala
-      throw result.failed.get
+  private def assertFailure[A <: Throwable : ClassTag](result: Try[Any]): Unit = {
+    val clazz = implicitly[ClassTag[A]].runtimeClass
+
+    result match {
+      case Failure(exception) =>
+        assert(clazz.isInstance(exception),
+          s"Expected exception of type $clazz, but got ${exception.getClass}")
+      case Success(_) =>
+        fail(new AssertionError(s"Expected exception of type $clazz, but got success"))
     }
   }
 }
