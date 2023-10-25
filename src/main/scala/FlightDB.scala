@@ -8,12 +8,12 @@ class FlightDB {
                                      // Used as an offset to calculate the index of a flight in the schedule
                                      firstFlightDate: LocalDate,
                                      // Each boolean represents whether a flight exists on that day
-                                     schedule: Vector[Boolean] = Vector.empty
+                                     schedule: Array[Boolean] = Array.empty
                                    ) {
     def addFlight(flight: Flight): Try[FlightSchedule] = {
       flightDateToScheduleIndex(flight.date) match {
         case Success(i) if i >= schedule.length =>
-          val newSchedule = schedule ++ Vector.fill(i - schedule.length + 1)(false)
+          val newSchedule = schedule ++ Array.fill(i - schedule.length + 1)(false)
           Success(this.copy(schedule = newSchedule.updated(i, true)))
 
         case Success(i) =>

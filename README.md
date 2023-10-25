@@ -54,12 +54,11 @@ efficient solution if we want to cover multiple years of flights while using com
 At one point I thought about a Bloom filter, but it may return false positives. The Bloom filter algorithm uses a bit
 array under the hood, so I thought about utilizing this technique somehow. I found interesting the idea of mapping the
 `(from, to, num)` triplet to a bitmap of available dates. Just to keep things simple, in the code I used a boolean
-vector instead of a bitmap. This gives us the same time complexity of O(1) for lookups, but it requires only a
-negligible amount of memory: just 62 KB for 12k flights.
+array instead of a bitmap. This gives us the same time complexity of O(1) for lookups, but it requires only a
+negligible amount of memory: just 16 KB for 12k flights.
 
-There is still a room for optimization. For example, initially I used boolean arrays, that required to know the first
-and last flight dates in advance to set their length, but with arrays 12k flights consumed only 16 KB of memory. And
-finally, by replacing arrays with bitmaps we will reduce memory usage further by a factor of 8.
+There is still a room for optimization. For example, by replacing arrays with bitmaps we will reduce memory usage
+further because every flight we be encoded as a single bit instead of a byte.
 
 ## DB updates
 
