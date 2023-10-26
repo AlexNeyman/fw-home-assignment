@@ -8,13 +8,12 @@ import java.nio.file.Paths
 import java.time.LocalDate
 import scala.util.{Try, Using}
 
-class FlightDBService(path: String, db: FlightDB) {
-  val dbRef: Ref[IO, FlightDB] = Ref.unsafe(db)
+class FlightDBService(path: String) {
+  val dbRef: Ref[IO, FlightDB] = Ref.unsafe(new FlightDB())
 
   private def updateDB(): IO[Unit] = {
+    val db = new FlightDB()
     for {
-      db <- dbRef.get
-      _ <- IO(db.clear())
       _ <- IO.fromTry(populateDB(db))
       _ <- dbRef.set(db)
     } yield ()

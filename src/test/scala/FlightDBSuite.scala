@@ -52,20 +52,6 @@ class FlightDBSuite extends AnyFlatSpec {
     assert(!flightDB.flightExists(Flight("A", "B", LocalDate.of(2020, 1, 1), "1")))
   }
 
-  "clear()" should "clear the database" in {
-    val flightDB = new FlightDB()
-    val flight = Flight("A", "B", LocalDate.of(2023, 1, 1), "1")
-
-    assertSuccess(flightDB.addFlight(flight))
-    assert(flightDB.flightExists(flight))
-
-    flightDB.clear()
-    assert(!flightDB.flightExists(flight))
-
-    assertSuccess(flightDB.addFlight(flight))
-    assert(flightDB.flightExists(flight))
-  }
-
   private def assertSuccess(result: Try[Any]): Unit = {
     assert(result.isSuccess)
   }
