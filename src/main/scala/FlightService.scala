@@ -30,7 +30,7 @@ object FlightService extends IOApp with CirceInstances {
     val host = "0.0.0.0"
     val port = 8082
 
-    val dbService = new FlightDBService(filePath)
+    val dbService = new FlightDBRunner(filePath)
 
     val service = for {
       _ <- dbService.start

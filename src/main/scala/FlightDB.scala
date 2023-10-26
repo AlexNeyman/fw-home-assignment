@@ -1,28 +1,32 @@
 package gpt
 
 import java.time.LocalDate
+import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 
 class FlightDB {
   private case class FlightSchedule(
                                      // Used as an offset to calculate the index of a flight in the schedule
                                      firstFlightDate: LocalDate,
+
                                      // Each boolean represents whether a flight exists on that day.
-                                     // Can be replaced with a bitset for better memory efficiency.
-                                     schedule: Array[Boolean] = Array.empty
+                                     //
+                                     // Vector is a persistent data structure, so it doesn't copy
+                                     // the whole data on appends.
+                                     // The downside of vectors is that they use more memory than arrays.
+                                     //
+                                     // With arrays memory usage can be reduced significantly,
+                                     // but we will have to know the array size in advance.
+                                     // Lookups on arrays are also (insignificantly) faster.
+                                     //
+                                     // A boolean array would use 1 byte per flight.
+                                     // This can be improved to 1 bit per flight by using a bitmap.
+                                     schedule: Vector[Boolean] = Vector.empty
                                    ) {
     def addFlight(flight: Flight): Try[FlightSchedule] = {
       flightDateToScheduleIndex(flight.date) match {
         case Success(i) if i >= schedule.length =>
-          // This approach may be a problem on a large scale because of lots of copying.
-          // Though there is a simple solution: we need to know the min and max dates in the schedule beforehand.
-          // Then we can allocate an array of the right size in advance.
-          //
-          // We also can use vectors, which is a persistent data structure,
-          // so it doesn't copy the whole data on appends.
-          // The downside of vectors is that they use more memory than arrays,
-          // plus they can be slightly slower in lookups.
-          val newSchedule = schedule ++ Array.fill(i - schedule.length + 1)(false)
+          val newSchedule = schedule ++ Vector.fill(i - schedule.length + 1)(false)
           Success(this.copy(schedule = newSchedule.updated(i, true)))
 
         case Success(i) =>
@@ -57,7 +61,7 @@ class FlightDB {
     }
   }
 
-  private var flights = Map.empty[String, FlightSchedule]
+  private val flights = TrieMap.empty[String, FlightSchedule]
 
   def addFlight(flight: Flight): Try[Unit] = {
     val flightSchedule = flights.getOrElse(flight.id, FlightSchedule(flight.date))
@@ -70,6 +74,10 @@ class FlightDB {
       case Failure(exception) =>
         Failure(exception)
     }
+  }
+
+  def totalFlights: Int = {
+    flights.values.map(_.schedule.count(_ == true)).sum
   }
 
   def flightExists(flight: Flight): Boolean = {

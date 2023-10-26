@@ -54,11 +54,17 @@ efficient solution if we want to cover multiple years of flights while using com
 At one point I thought about a Bloom filter, but it may return false positives. The Bloom filter algorithm uses a bit
 array under the hood, so I thought about utilizing this technique somehow. I found interesting the idea of mapping the
 `(from, to, num)` triplet to a bitmap of available dates. Just to keep things simple, in the code I used a boolean
-array instead of a bitmap. This gives us the same time complexity of O(1) for lookups, but it requires only a
-negligible amount of memory: just 16 KB for 12k flights.
+vector instead of a bitmap. This gives us the same time complexity of O(1) for lookups, but it requires much less
+memory: only 64 KB for 12k flights. With 40 million flights it is 30 MB.
 
-There is still a room for optimization. For example, by replacing arrays with bitmaps we will reduce memory usage
-further because every flight we be encoded as a single bit instead of a byte.
+There is still a room for optimization. By replacing vectors with arrays we can reduce memory usage to 16 KB for 12k
+flights. The downside of this approach is that we will have to know the first and last dates of the flights in advance,
+so we can allocate an array of the right size. Also, by replacing arrays with bitmaps we can reduce memory usage even
+further because every flight will be encoded as a single bit instead of a byte.
+
+> [!NOTE]  
+> All these memory consumption numbers are for the test data. The real data will have a different distribution of
+> flights. What matters is the number of unique flights and the time range covered by the schedule.
 
 ## DB updates
 
@@ -89,6 +95,7 @@ entirely.
 
 ## Other stuff
 
+* Parsing the file can be parallelized to make it faster.
 * I left the hardcoded file path, listen address and port, but it definitely should be configurable.
 * There are unhandled errors here and there for operations like parsing and file reading.
 * There is definitely a room for tests. I wrote only a couple of unit tests for the `FlightDB` class.

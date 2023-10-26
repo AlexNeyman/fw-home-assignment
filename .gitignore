@@ -8,3 +8,4 @@ target
 .bloop/
 .bsp/
 .metals/
+flights.generated.csv

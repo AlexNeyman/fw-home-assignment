@@ -8,7 +8,7 @@ import java.nio.file.Paths
 import java.time.LocalDate
 import scala.util.{Try, Using}
 
-class FlightDBService(path: String) {
+class FlightDBRunner(path: String) {
   val dbRef: Ref[IO, FlightDB] = Ref.unsafe(new FlightDB())
 
   private def updateDB(): IO[Unit] = {
