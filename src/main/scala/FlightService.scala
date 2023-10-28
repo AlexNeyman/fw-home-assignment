@@ -30,13 +30,13 @@ object FlightService extends IOApp with CirceInstances {
     val host = "0.0.0.0"
     val port = 8082
 
-    val dbService = new FlightDBRunner(filePath)
+    val dbRunner = new FlightDBRunner(filePath)
 
     val service = for {
-      _ <- dbService.start
+      _ <- dbRunner.start
       _ <- BlazeServerBuilder[IO]
         .bindHttp(port, host)
-        .withHttpApp(routes(dbService.dbRef).orNotFound)
+        .withHttpApp(routes(dbRunner.dbRef).orNotFound)
         .resource
     } yield ()
 
